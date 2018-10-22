@@ -20,14 +20,17 @@ import ua.com.prologistic.model.Country;
 import java.io.*;
 import java.lang.reflect.Array;
 import java.net.InetAddress;
+import java.sql.*;
 import java.text.ParseException;
 import java.time.LocalDate;
 import java.time.Period;
 import java.time.ZoneId;
 import java.util.*;
+import java.util.Date;
 
 public class FileCreation {
-    public static void main(String[] args) throws ParseException, IOException, UnirestException, InterruptedException {
+    public static void main(String[] args) throws ParseException, IOException, UnirestException, InterruptedException, SQLException {
+
 
         // создание самого excel файла
         HSSFWorkbook workbook = new HSSFWorkbook();
@@ -58,15 +61,15 @@ public class FileCreation {
         row.createCell(13).setCellValue("Квартира");
 
         Process check = java.lang.Runtime.getRuntime().exec("ping www.randus.org");
-        if (check.waitFor()==0) {
-        List <Data> dataList = (List<Data>) fillData();
-        // заполняем лист данными
-        for (Data dataModel : dataList) {
-            createSheetHeader(sheet, ++rowNum, dataModel);
-        }
+        if (check.waitFor() == 0) {
+            List<Data> dataList = (List<Data>) fillData();
+            // заполняем лист данными
+            for (Data dataModel : dataList) {
+                createSheetHeader(sheet, ++rowNum, dataModel);
+            }
 
 
-        // записываем созданный в памяти Excel документ в файл
+            // записываем созданный в памяти Excel документ в файл
 
             try (FileOutputStream out = new FileOutputStream(new File("Apache POI Excel File.xls"))) {
                 workbook.write(out);
@@ -74,10 +77,29 @@ public class FileCreation {
                 e.printStackTrace();
             }
 
-            System.out.println("Excel файл успешно создан по пути *Директория программы*\\Apache POI Excel File.xls!");
+            System.out.println("Excel файл успешно создан с помощью API по пути *Директория программы*\\Apache POI Excel File.xls!");
+        } else{
+            List<Data> dataList = (List<Data>) fillDatafromDB();
+            if (!dataList.isEmpty()) {
+                for (Data dataModel : dataList) {
+                    createSheetHeader(sheet, ++rowNum, dataModel);
+                }
+
+
+                // записываем созданный в памяти Excel документ в файл
+
+                try (FileOutputStream out = new FileOutputStream(new File("Apache POI Excel File.xls"))) {
+                    workbook.write(out);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+                System.out.println("Excel файл успешно создан из базы данных по пути *Директория программы*\\Apache POI Excel File.xls!");
+            }
+            else { System.out.println("Фаил не заплонен! Отсутсвует подключение к интернету и данные в базе данных.");}
+            }
+
         }
-        else System.out.println("Фаил не заплонен! Отсутсвует подключение к интернету.");
-    }
 
     // заполнение строки (rowNum) определенного листа (sheet)
     // данными  из dataModel созданного в памяти Excel файла
@@ -104,10 +126,10 @@ public class FileCreation {
     // заполняем список рандомными данными
     // в реальных приложениях данные будут из БД или интернета
     private static List<String> getData(String path) throws IOException {
-        BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(path),"Cp1251"));
+        BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(path), "Cp1251"));
         String line;
-        List<String> List= new ArrayList<>();
-        while ((line= reader.readLine())!=null) {
+        List<String> List = new ArrayList<>();
+        while ((line = reader.readLine()) != null) {
             List.add(line);
         }
         return List;
@@ -115,9 +137,9 @@ public class FileCreation {
     }
 
     private static Date RandomData() {
-        Random  rnd;
-        Date    dt;
-        long    ms;
+        Random rnd;
+        Date dt;
+        long ms;
 // Get a new random instance, seeded from the clock
         rnd = new Random();
 // Get an Epoch value roughly between 1940 and 2010
@@ -125,7 +147,7 @@ public class FileCreation {
 // Add up to 70 years to it (using modulus on the next long)
         ms = -946771200000L + (Math.abs(rnd.nextLong()) % (70L * 365 * 24 * 60 * 60 * 1000));
         dt = new Date(ms);
-        return(dt);
+        return (dt);
     }
 
     private static int calculateAge(LocalDate birthDate, LocalDate currentDate) {
@@ -136,54 +158,52 @@ public class FileCreation {
         }
     }
 
-    private  static  String putData(Date a){
+    private static String putData(Date a) {
 
         Calendar calendar = Calendar.getInstance();
-        calendar.setTime (a);
+        calendar.setTime(a);
 
-        int Day=calendar.get(Calendar.DAY_OF_MONTH);
-        int Month = calendar.get(Calendar.MONTH)+1;
+        int Day = calendar.get(Calendar.DAY_OF_MONTH);
+        int Month = calendar.get(Calendar.MONTH) + 1;
         int Year = calendar.get(Calendar.YEAR);
 
         return (String.format("%s %s %s", Integer.toString(Day), Integer.toString(Month), Integer.toString(Year)));
 
     }
 
-    private  static int calculateAge1(Date a){
+    private static int calculateAge1(Date a) {
 
         LocalDate b = LocalDate.ofInstant(a.toInstant(), ZoneId.systemDefault());
         LocalDate c = LocalDate.now();
 
-        return (calculateAge(b,c));
+        return (calculateAge(b, c));
 
     }
 
-    private static String createINN(){
-        String first="77";
-        String[] second = {"01","02","03","04","05","06","07","08","09","10","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","33","34","35","36","43","45","46","47","48","49","50","51"};
+    private static String createINN() {
+        String first = "77";
+        String[] second = {"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "33", "34", "35", "36", "43", "45", "46", "47", "48", "49", "50", "51"};
         int rnd1 = new Random().nextInt(second.length);
-        StringBuilder third= new StringBuilder();
-        for (int i=0; i<6; i++) {
+        StringBuilder third = new StringBuilder();
+        for (int i = 0; i < 6; i++) {
             int rnd2 = new Random().nextInt(10);
             third.append(rnd2);
         }
-        String prep=first+second[rnd1]+third.toString();
-        int elevennum=(Character.getNumericValue(prep.charAt(0))*7+Character.getNumericValue(prep.charAt(1))*2+Character.getNumericValue(prep.charAt(2))*4+Character.getNumericValue(prep.charAt(3))*10+Character.getNumericValue(prep.charAt(4))*3+Character.getNumericValue(prep.charAt(5))*5+Character.getNumericValue(prep.charAt(6))*9+Character.getNumericValue(prep.charAt(7))*4+Character.getNumericValue(prep.charAt(8))*6+Character.getNumericValue(prep.charAt(9))*8)%11;
-        if (elevennum==10)
-        {
-            elevennum=0;
+        String prep = first + second[rnd1] + third.toString();
+        int elevennum = (Character.getNumericValue(prep.charAt(0)) * 7 + Character.getNumericValue(prep.charAt(1)) * 2 + Character.getNumericValue(prep.charAt(2)) * 4 + Character.getNumericValue(prep.charAt(3)) * 10 + Character.getNumericValue(prep.charAt(4)) * 3 + Character.getNumericValue(prep.charAt(5)) * 5 + Character.getNumericValue(prep.charAt(6)) * 9 + Character.getNumericValue(prep.charAt(7)) * 4 + Character.getNumericValue(prep.charAt(8)) * 6 + Character.getNumericValue(prep.charAt(9)) * 8) % 11;
+        if (elevennum == 10) {
+            elevennum = 0;
         }
-        int twelve=(Character.getNumericValue(prep.charAt(0))*3+Character.getNumericValue(prep.charAt(1))*7+Character.getNumericValue(prep.charAt(2))*2+Character.getNumericValue(prep.charAt(3))*4+Character.getNumericValue(prep.charAt(4))*10+Character.getNumericValue(prep.charAt(5))*3+Character.getNumericValue(prep.charAt(6))*5+Character.getNumericValue(prep.charAt(7))*9+Character.getNumericValue(prep.charAt(8))*4+Character.getNumericValue(prep.charAt(9))*6+elevennum*8)%11;
-        if (twelve==10)
-        {
-            twelve=0;
+        int twelve = (Character.getNumericValue(prep.charAt(0)) * 3 + Character.getNumericValue(prep.charAt(1)) * 7 + Character.getNumericValue(prep.charAt(2)) * 2 + Character.getNumericValue(prep.charAt(3)) * 4 + Character.getNumericValue(prep.charAt(4)) * 10 + Character.getNumericValue(prep.charAt(5)) * 3 + Character.getNumericValue(prep.charAt(6)) * 5 + Character.getNumericValue(prep.charAt(7)) * 9 + Character.getNumericValue(prep.charAt(8)) * 4 + Character.getNumericValue(prep.charAt(9)) * 6 + elevennum * 8) % 11;
+        if (twelve == 10) {
+            twelve = 0;
         }
 
-        return (prep+ elevennum + twelve);
+        return (prep + elevennum + twelve);
 
     }
 
-    public static String createIndex() {
+    private static String createIndex() {
         StringBuilder index = new StringBuilder();
         for (int i = 0; i < 6; i++) {
             int rnd = new Random().nextInt(10);
@@ -193,24 +213,20 @@ public class FileCreation {
     }
 
 
-    public static Pls parser() throws UnirestException {
+    private static Pls parser() throws UnirestException {
         HttpResponse<JsonNode> jsonResponse = Unirest.get("https://randus.org/api.php").asJson();
         JsonNode body = jsonResponse.getBody();
         int status = jsonResponse.getStatus();
 
 
         Gson g = new Gson();
-        Pls value = g.fromJson(body.toString(),Pls.class);
+        Pls value = g.fromJson(body.toString(), Pls.class);
 
-        return  (value);
+        return (value);
     }
 
 
-
-
-
-    private static List<Data> fillData() throws IOException,UnirestException {
-
+    private static List<Data> fillData() throws IOException, UnirestException, SQLException {
 
 
         List<String> MNames = getData("src\\main\\resources\\MNames.txt");
@@ -223,26 +239,55 @@ public class FileCreation {
         List<String> Streets = getData("src\\main\\resources\\Streets.txt");
 
 
-
-
-
         Random rnd = new Random(System.currentTimeMillis());
-        int amount = 1+rnd.nextInt(30);
+        int amount = 1 + rnd.nextInt(30);
 
         List<Data> dataModels = new ArrayList<>();
-        for (int i=0; i<amount; i++) {
-            Date a=RandomData();
-            Pls person=parser();
-            if (person.gender.equals("w")){
-            dataModels.add(new Data(person.fname, person.lname,  person.patronymic, calculateAge1(a),  "Ж", putData(a), createINN(), createIndex(), Countries.get(rnd.nextInt(30)), Regions.get(rnd.nextInt(30)), person.city, person.street, 1+ rnd.nextInt(300),1+ rnd.nextInt(2000)));
+
+        for (int i = 0; i < amount; i++) {
+            Date a = RandomData();
+            Pls person = parser();
+            var contr=rnd.nextInt(30);
+            var reg=rnd.nextInt(30);
+            var house=1 + rnd.nextInt(300);
+            var flat=1 + rnd.nextInt(2000);
+            if (person.gender.equals("w")) {
+
+                try (Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/home?autoReconnect=true&useSSL=false", "root", "1234");
+                     Statement statement = connection.createStatement()) {
+                    statement.executeUpdate("insert into persons (sname,secondname,patronymic,Age,Sex,BirtDay,INN,Ind,Country,region,city,street,house,flat) values ('" + person.fname + "', '" + person.lname + "',  '" + person.patronymic + "', '" + calculateAge1(a) + "',  'Ж',  '" + putData(a) + "', '" + createINN() + "',  '" + createIndex() + "',  '" + Countries.get(contr) + "',  '" + Regions.get(reg) + "',  '" + person.city + "',  '" + person.street + "',  '" + house + "', '" + flat+"')");
+
+                    dataModels.add(new Data(person.fname, person.lname, person.patronymic, calculateAge1(a), "Ж", putData(a), createINN(), createIndex(), Countries.get(contr), Regions.get(reg), person.city, person.street, house, flat));
+                }
             }
-            else {
-                dataModels.add(new Data(person.fname, person.lname,  person.patronymic, calculateAge1(a),  "М", putData(a), createINN(), createIndex(), Countries.get(rnd.nextInt(30)), Regions.get(rnd.nextInt(30)), person.city, person.street, 1+ rnd.nextInt(300),1+ rnd.nextInt(2000)));
+            else
+                try (Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/home?autoReconnect=true&useSSL=false", "root", "1234");
+                     Statement statement = connection.createStatement()) {
+
+                    statement.executeUpdate("insert into persons (sname,secondname,patronymic,Age,Sex,BirtDay,INN,Ind,Country,region,city,street,house,flat) values ('" + person.fname + "', '" + person.lname + "',  '" + person.patronymic + "', '" + calculateAge1(a) + "',  'М',  '" + putData(a) + "', '" + createINN() + "',  '" + createIndex() + "',  '" + Countries.get(contr) + "',  '" + Regions.get(reg) + "',  '" + person.city + "',  '" + person.street + "',  '" + house + "', '" + flat+"')");
+                    dataModels.add(new Data(person.fname, person.lname, person.patronymic, calculateAge1(a), "М", putData(a), createINN(), createIndex(), Countries.get(contr), Regions.get(reg), person.city, person.street, house, flat));
+
+                }
 
             }
-        }
 
         return dataModels;
+
     }
 
+    private static List<Data> fillDatafromDB() throws SQLException {
+        Random rnd = new Random(System.currentTimeMillis());
+        int amount = 1 + rnd.nextInt(30);
+
+        List<Data> dataModels1 = new ArrayList<>();
+
+        try (Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/home?autoReconnect=true&useSSL=false", "root", "1234");
+             Statement statement = connection.createStatement()) {
+            ResultSet resultSet = statement.executeQuery("select * from persons limit "+amount);
+            while (resultSet.next()){
+                dataModels1.add(new Data(resultSet.getString("sname"),resultSet.getString("secondname"), resultSet.getString("patronymic"), resultSet.getInt("Age"), resultSet.getString("Sex"), resultSet.getString("BirtDay"), resultSet.getString("INN"), resultSet.getString("Ind"), resultSet.getString("Country"), resultSet.getString("region"),resultSet.getString("city"), resultSet.getString("street"), resultSet.getInt("house"), resultSet.getInt("flat")));
+            }
+        }
+        return (dataModels1);
+    }
 }
