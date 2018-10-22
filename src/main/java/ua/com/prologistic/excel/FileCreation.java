@@ -1,7 +1,7 @@
 package ua.com.prologistic.excel;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.google.gson.Gson;
+import com.google.gson.*;
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.JsonNode;
 import com.mashape.unirest.http.ObjectMapper;
@@ -14,10 +14,12 @@ import org.json.JSONObject;
 import org.json.JSONString;
 import ua.com.prologistic.model.Data;
 import ua.com.prologistic.model.Pls;
+import ua.com.prologistic.model.Country;
 
 
 import java.io.*;
 import java.lang.reflect.Array;
+import java.net.InetAddress;
 import java.text.ParseException;
 import java.time.LocalDate;
 import java.time.Period;
@@ -25,7 +27,7 @@ import java.time.ZoneId;
 import java.util.*;
 
 public class FileCreation {
-    public static void main(String[] args) throws ParseException, IOException,UnirestException {
+    public static void main(String[] args) throws ParseException, IOException, UnirestException, InterruptedException {
 
         // создание самого excel файла
         HSSFWorkbook workbook = new HSSFWorkbook();
@@ -33,7 +35,7 @@ public class FileCreation {
         HSSFSheet sheet = workbook.createSheet("Просто лист");
 
         // заполняем список какими-то данными
-        List <Data> dataList = (List<Data>) fillData();
+
 
         // счетчик для строк
         int rowNum = 0;
@@ -55,20 +57,26 @@ public class FileCreation {
         row.createCell(12).setCellValue("Дом");
         row.createCell(13).setCellValue("Квартира");
 
-
-
+        Process check = java.lang.Runtime.getRuntime().exec("ping www.randus.org");
+        if (check.waitFor()==0) {
+        List <Data> dataList = (List<Data>) fillData();
         // заполняем лист данными
         for (Data dataModel : dataList) {
             createSheetHeader(sheet, ++rowNum, dataModel);
         }
 
+
         // записываем созданный в памяти Excel документ в файл
-        try (FileOutputStream out = new FileOutputStream(new File("Apache POI Excel File.xls"))) {
-            workbook.write(out);
-        } catch (IOException e) {
-            e.printStackTrace();
+
+            try (FileOutputStream out = new FileOutputStream(new File("Apache POI Excel File.xls"))) {
+                workbook.write(out);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            System.out.println("Excel файл успешно создан по пути *Директория программы*\\Apache POI Excel File.xls!");
         }
-        System.out.println("Excel файл успешно создан по пути *Директория программы*\\Apache POI Excel File.xls!");
+        else System.out.println("Фаил не заплонен! Отсутсвует подключение к интернету.");
     }
 
     // заполнение строки (rowNum) определенного листа (sheet)
@@ -185,18 +193,16 @@ public class FileCreation {
     }
 
 
-    public static JsonNode parser() throws UnirestException {
+    public static Pls parser() throws UnirestException {
         HttpResponse<JsonNode> jsonResponse = Unirest.get("https://randus.org/api.php").asJson();
         JsonNode body = jsonResponse.getBody();
         int status = jsonResponse.getStatus();
-        JSONObject b = body.getObject();
-        Gson g = new Gson();
 
+
+        Gson g = new Gson();
         Pls value = g.fromJson(body.toString(),Pls.class);
 
-
-       System.out.print(value);
-        return  (body);
+        return  (value);
     }
 
 
@@ -205,7 +211,6 @@ public class FileCreation {
 
     private static List<Data> fillData() throws IOException,UnirestException {
 
-        var ad=parser();
 
 
         List<String> MNames = getData("src\\main\\resources\\MNames.txt");
@@ -221,26 +226,23 @@ public class FileCreation {
 
 
 
-
-
         Random rnd = new Random(System.currentTimeMillis());
         int amount = 1+rnd.nextInt(30);
 
         List<Data> dataModels = new ArrayList<>();
         for (int i=0; i<amount; i++) {
             Date a=RandomData();
-            int sex = 1+rnd.nextInt(2);
-            if (sex==1){
-            dataModels.add(new Data(MNames.get(rnd.nextInt(30)), MSurnames.get(rnd.nextInt(30)),  MPatronymic.get(rnd.nextInt(30)), calculateAge1(a),  "M", putData(a), createINN(), createIndex(), Countries.get(rnd.nextInt(30)), Regions.get(rnd.nextInt(30)), Cities.get(rnd.nextInt(30)), Streets.get(rnd.nextInt(30)), 1+ rnd.nextInt(300),1+ rnd.nextInt(2000)));
-
+            Pls person=parser();
+            if (person.gender.equals("w")){
+            dataModels.add(new Data(person.fname, person.lname,  person.patronymic, calculateAge1(a),  "Ж", putData(a), createINN(), createIndex(), Countries.get(rnd.nextInt(30)), Regions.get(rnd.nextInt(30)), person.city, person.street, 1+ rnd.nextInt(300),1+ rnd.nextInt(2000)));
             }
             else {
-                String s=MPatronymic.get(rnd.nextInt(30));
-                dataModels.add(new Data(FNames.get(rnd.nextInt(30)), MSurnames.get(rnd.nextInt(30)) + "а", s.substring(0,s.length()-2 ) + "на", calculateAge1(a), "Ж", putData(a), createINN(),createIndex(), Countries.get(rnd.nextInt(30)), Regions.get(rnd.nextInt(30)), Cities.get(rnd.nextInt(30)), Streets.get(rnd.nextInt(30)), 1+ rnd.nextInt(300),1+ rnd.nextInt(2000)));
+                dataModels.add(new Data(person.fname, person.lname,  person.patronymic, calculateAge1(a),  "М", putData(a), createINN(), createIndex(), Countries.get(rnd.nextInt(30)), Regions.get(rnd.nextInt(30)), person.city, person.street, 1+ rnd.nextInt(300),1+ rnd.nextInt(2000)));
+
             }
         }
 
-
         return dataModels;
     }
+
 }
