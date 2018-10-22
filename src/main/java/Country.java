@@ -1,5 +1,4 @@
-package ua.com.prologistic.model;
+package PACKAGE_NAME;
 
 public class Country {
-    public String title;
 }
